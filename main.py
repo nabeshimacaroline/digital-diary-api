@@ -32,4 +32,7 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     db.refresh(note)
     return note
 
-    
+@app.get("/notes/")
+def list_notes(db: Session = Depends(get_db)):
+    notes = db.query(Note).all()
+    return notes
