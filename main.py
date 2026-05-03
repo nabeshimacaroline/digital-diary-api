@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 import models
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from models import Note
 from database import engine, SessionLocal
 from schemas import NoteCreate
@@ -36,3 +36,10 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
 def list_notes(db: Session = Depends(get_db)):
     notes = db.query(Note).all()
     return notes
+
+@app.get("/notes/{note_id}")
+def get_note(note_id: int, db: Session = Depends(get_db)):
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return note
