@@ -60,3 +60,17 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(note)
     return note
+
+@app.delete("/notes/{note_id}")
+def delete_note (note_id: int, db: Session = Depends(get_db)):
+    # buscar e validar
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    #deletar os dados
+    db.delete(note)
+    
+    #salvar
+    db.commit()
+    return {"message": "Note deleted successfully"}
