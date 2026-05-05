@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
 import models
 from fastapi import FastAPI, Depends, HTTPException
-from models import Note
+from models import Note, Event
 from database import engine, SessionLocal
-from schemas import NoteCreate, NoteUpdate
+from schemas import NoteCreate, NoteUpdate, EventCreate
+from datetime import datetime, timezone
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -74,3 +75,33 @@ def delete_note (note_id: int, db: Session = Depends(get_db)):
     #salvar
     db.commit()
     return {"message": "Note deleted successfully"}
+
+@app.post("/events/")
+def create_event(payload: EventCreate, db: Session = Depends(get_db)):
+    #definição do tempo
+    now = datetime.now(timezone.utc)
+    scheduled = payload.scheduled_at
+    notification = payload.notification_at
+
+    #validação
+    if scheduled < now:
+        raise HTTPException(status_code=400, detail="Scheduled cannot be a date in the past.")
+    
+    if notification is not None and notification > scheduled:
+        raise HTTPException(status_code=400, detail="Notification cannot be set on a date later than scheduled.")
+
+    event = Event(
+        category=payload.category,
+        message_body=payload.message_body,
+        classification=payload.classification,
+        tag=payload.tag,
+        scheduled_at=payload.scheduled_at,
+        notification_at=payload.notification_at,
+        status = "Scheduled"
+        )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+    
