@@ -120,3 +120,20 @@ def list_events(db: Session = Depends(get_db)):
             event.status = "Pending"
 
     return events
+
+@app.get("/events/{event_id}")
+def get_event(event_id: int, db: Session = Depends(get_db)):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    now = datetime.now(timezone.utc)
+    scheduled = event.scheduled_at
+
+    if scheduled is not None and scheduled.tzinfo is None:
+            scheduled = scheduled.replace(tzinfo=timezone.utc)
+         
+    if event.status == "Scheduled" and scheduled < now:
+        event.status = "Pending"
+    
+    return event
