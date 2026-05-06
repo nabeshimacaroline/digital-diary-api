@@ -104,4 +104,19 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     db.refresh(event)
     return event
 
-    
+@app.get("/events/")
+def list_events(db: Session = Depends(get_db)):
+    events = db.query(Event).all()
+    now = datetime.now(timezone.utc)
+
+    for event in events:
+        scheduled = event.scheduled_at
+
+        # 1. Blindagem de segurança do fuso horário para a leitura
+        if scheduled is not None and scheduled.tzinfo is None:
+            scheduled = scheduled.replace(tzinfo=timezone.utc)
+        # 2. A checagem do correto   
+        if event.status == "Scheduled" and scheduled < now:
+            event.status = "Pending"
+
+    return events
