@@ -3,7 +3,7 @@ import models
 from fastapi import FastAPI, Depends, HTTPException
 from models import Note, Event
 from database import engine, SessionLocal
-from schemas import NoteCreate, NoteUpdate, EventCreate
+from schemas import NoteCreate, NoteUpdate, EventCreate, EventUpdate
 from datetime import datetime, timezone
 
 models.Base.metadata.create_all(bind=engine)
@@ -136,4 +136,46 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     if event.status == "Scheduled" and scheduled < now:
         event.status = "Pending"
     
+    return event
+
+@app.patch("/events/{event_id}")
+def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_db)):
+    # buscar e validar
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    # Pega só o que o usuário enviou
+    update_data = payload.model_dump(exclude_unset=True) 
+
+    # --- inicio da validação ---
+    # previsão de futuro
+    final_scheduled = update_data.get("scheduled_at", event.scheduled_at)
+    final_notification = update_data.get("notification_at", event.notification_at)
+
+    #blindagem
+    if final_scheduled is not None and final_scheduled.tzinfo is None:
+        final_scheduled = final_scheduled.replace(tzinfo=timezone.utc)
+    if final_notification is not None and final_notification.tzinfo is None:
+        final_notification = final_notification.replace(tzinfo=timezone.utc)
+    
+    # regras de negocio
+    #regra 1 - data de notificação não pode ser maior que a data do evento
+    if final_notification is not None and final_notification > final_scheduled:
+        raise HTTPException(status_code=400, detail="Notification cannot be set on a date later than scheduled.")
+
+    #regra 2 - se o usuário estiver alterando uma data, ela não pode estar no passado
+    if final_scheduled in update_data:
+        now = datetime.now(timezone.utc)
+        if final_scheduled < now:
+            raise HTTPException (status_code=400, details="Scheduled cannot be a date in the past")
+    
+    # --- final da validação ---
+
+    for key, value in update_data.items():
+        setattr(event, key, value) # Substitui o valor antigo pelo novo no objeto da nota
+    
+    #salvar e retornar
+    db.commit()
+    db.refresh(event)
     return event
