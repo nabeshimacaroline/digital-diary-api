@@ -179,3 +179,17 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
     db.commit()
     db.refresh(event)
     return event
+
+@app.delete("/events/{event_id}")
+def delete_event (event_id: int, db: Session = Depends(get_db)):
+    # buscar e validar
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    #deletar os dados
+    db.delete(event)
+    
+    #salvar
+    db.commit()
+    return {"message": "Event deleted successfully"}
