@@ -2,20 +2,13 @@ from sqlalchemy.orm import Session
 import models
 from fastapi import FastAPI, Depends, HTTPException
 from models import Note, Event
-from database import engine, SessionLocal
+from database import engine, get_db
 from schemas import NoteCreate, NoteUpdate, EventCreate, EventUpdate
 from datetime import datetime, timezone
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @app.get("/")
 def root():
