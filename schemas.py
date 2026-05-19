@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
-
+from enums import StatusEvent
 
 class NoteCreate(BaseModel):
     category: str = Field(max_length=50)
@@ -28,4 +28,4 @@ class EventUpdate(BaseModel):
     tag: Optional[str] = Field(default=None, max_length=50)
     scheduled_at: Optional[datetime] = Field(default= None)
     notification_at: Optional[datetime] = Field(default=None)
-    status: Optional[str] = Field(default=None) # idéia aqui no futuro não é permitir que o usuário insira a informção, mas opte por alternativas fornecidas (1 - Finished | 2 - Canceled)
+    status: Optional[StatusEvent] = Field(default=None) # idéia aqui no futuro não é permitir que o usuário insira a informção, mas opte por alternativas fornecidas (1 - Finished | 2 - Canceled)

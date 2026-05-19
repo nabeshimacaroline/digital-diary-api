@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum as SQLEnum,ForeignKey
 from database import Base
 from sqlalchemy.sql import func
+from enums import StatusEvent
 
 class Note(Base):
     __tablename__ = "notes"
@@ -30,7 +31,7 @@ class Event(Base):
     classification = Column(String(50))
     tag = Column(String(50))
     scheduled_at = Column(DateTime)
-    status = Column(String(50))
+    status = Column(SQLEnum(StatusEvent, native_enum=False, name="status_event"), nullable=False, default=StatusEvent.SCHEDULED)
     notification_at = Column(DateTime)
     is_notify = Column(Boolean)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
