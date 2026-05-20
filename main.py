@@ -3,8 +3,9 @@ import models
 from fastapi import FastAPI, Depends, HTTPException
 from models import Note, Event
 from database import engine, get_db
-from schemas import NoteCreate, NoteUpdate, EventCreate, EventUpdate
+from schemas import NoteCreate, NoteUpdate, EventCreate, EventUpdate, EventResponse
 from datetime import datetime, timezone
+from enums import StatusEvent
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -90,14 +91,13 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
         tag=payload.tag,
         scheduled_at=payload.scheduled_at,
         notification_at=payload.notification_at,
-        status = "Scheduled"
         )
     db.add(event)
     db.commit()
     db.refresh(event)
     return event
 
-@app.get("/events/")
+@app.get("/events/", response_model=list[EventResponse])
 def list_events(db: Session = Depends(get_db)):
     events = db.query(Event).all()
     now = datetime.now(timezone.utc)
@@ -109,12 +109,12 @@ def list_events(db: Session = Depends(get_db)):
         if scheduled is not None and scheduled.tzinfo is None:
             scheduled = scheduled.replace(tzinfo=timezone.utc)
         # 2. A checagem do correto   
-        if event.status == "Scheduled" and scheduled < now:
+        if event.status == StatusEvent.SCHEDULED and scheduled < now:
             event.status = "Pending"
 
     return events
 
-@app.get("/events/{event_id}")
+@app.get("/events/{event_id}", response_model=EventResponse)
 def get_event(event_id: int, db: Session = Depends(get_db)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if event is None:
@@ -126,7 +126,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     if scheduled is not None and scheduled.tzinfo is None:
             scheduled = scheduled.replace(tzinfo=timezone.utc)
          
-    if event.status == "Scheduled" and scheduled < now:
+    if event.status == StatusEvent.SCHEDULED and scheduled < now:
         event.status = "Pending"
     
     return event

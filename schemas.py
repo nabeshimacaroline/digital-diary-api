@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 from enums import StatusEvent
@@ -29,3 +29,17 @@ class EventUpdate(BaseModel):
     scheduled_at: Optional[datetime] = Field(default= None)
     notification_at: Optional[datetime] = Field(default=None)
     status: Optional[StatusEvent] = Field(default=None) # idéia aqui no futuro não é permitir que o usuário insira a informção, mas opte por alternativas fornecidas (1 - Finished | 2 - Canceled)
+
+class EventResponse(BaseModel):
+    id: int
+    created_at: datetime
+    category: str
+    message_body: str
+    classification: str
+    tag: Optional[str]
+    scheduled_at: datetime
+    status: StatusEvent | str
+    notification_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
