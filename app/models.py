@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum as SQLEnum,ForeignKey
-from database import Base
+from app.database import Base
 from sqlalchemy.sql import func
-from enums import StatusEvent
+from app.enums import StatusEvent
 
 class Note(Base):
     __tablename__ = "notes"

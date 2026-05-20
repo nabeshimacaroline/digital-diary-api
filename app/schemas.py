@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
-from enums import StatusEvent
+from app.enums import StatusEvent
 
 class NoteCreate(BaseModel):
     category: str = Field(max_length=50)

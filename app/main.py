@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
-import models
+from app import models
 from fastapi import FastAPI, Depends, HTTPException
-from models import Note, Event
-from database import engine, get_db
-from schemas import NoteCreate, NoteUpdate, EventCreate, EventUpdate, EventResponse
+from app.models import Note, Event
+from app.database import engine, get_db
+from app.schemas import NoteCreate, NoteUpdate, EventCreate, EventUpdate, EventResponse
 from datetime import datetime, timezone
-from enums import StatusEvent
+from app.enums import StatusEvent
 
 models.Base.metadata.create_all(bind=engine)
 
