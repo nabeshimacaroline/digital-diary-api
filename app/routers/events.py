@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+from typing import Optional
 from app.database import get_db
 from app.models import Event
 from app.schemas import EventCreate, EventUpdate, EventResponse
@@ -36,9 +37,28 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     return event
 
 @router.get("/", response_model=list[EventResponse])
-def list_events(db: Session = Depends(get_db)):
-    events = db.query(Event).all()
+def list_events(category: Optional[str] = Query(None),
+                status: Optional[str] = Query(None),
+                db: Session = Depends(get_db)
+                ):
     now = datetime.now(timezone.utc)
+    query = db.query(Event)
+
+    if category:
+        query = query.filter(Event.category == category)
+
+    if status:
+        status = status.lower()
+        if status == "pending":
+            query = query.filter(Event.status == StatusEvent.SCHEDULED, Event.scheduled_at < now)
+
+        elif status == "scheduled":
+            query = query.filter(Event.status == StatusEvent.SCHEDULED, Event.scheduled_at > now)
+
+        else:    
+            query = query.filter(Event.status == status)
+
+    events = query.all()
 
     for event in events:
         scheduled = event.scheduled_at
