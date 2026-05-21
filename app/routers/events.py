@@ -40,6 +40,8 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
 def list_events(category: Optional[str] = Query(None),
                 status: Optional[str] = Query(None),
                 search: Optional[str] = Query(None),
+                start_date: Optional[datetime] = Query(None),
+                end_date: Optional[datetime] = Query(None),
                 db: Session = Depends(get_db)
                 ):
     now = datetime.now(timezone.utc)
@@ -61,6 +63,12 @@ def list_events(category: Optional[str] = Query(None),
     
     if search:
         query = query.filter(Event.message_body.ilike(f"%{search}%"))
+    
+    if start_date:
+        query = query.filter(Event.scheduled_at >= start_date)
+
+    if end_date:
+        query = query.filter(Event.scheduled_at <= end_date)
 
     events = query.all()
 
