@@ -39,6 +39,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[EventResponse])
 def list_events(category: Optional[str] = Query(None),
                 status: Optional[str] = Query(None),
+                search: Optional[str] = Query(None),
                 db: Session = Depends(get_db)
                 ):
     now = datetime.now(timezone.utc)
@@ -57,6 +58,9 @@ def list_events(category: Optional[str] = Query(None),
 
         else:    
             query = query.filter(Event.status == status)
+    
+    if search:
+        query = query.filter(Event.message_body.ilike(f"%{search}%"))
 
     events = query.all()
 
