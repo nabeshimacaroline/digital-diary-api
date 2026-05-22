@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import datetime
 from app.database import get_db
 from app.models import Note
 from app.schemas import NoteCreate, NoteUpdate
@@ -19,8 +21,28 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     return note
 
 @router.get("/")
-def list_notes(db: Session = Depends(get_db)):
-    notes = db.query(Note).all()
+def list_notes(category: Optional[str] = Query(None),
+               search: Optional[str] = Query(None),
+               start_date: Optional[datetime] = Query(None),
+               end_date: Optional[datetime] = Query(None),
+               db: Session = Depends(get_db)
+               ):
+    
+    query = db.query(Note)
+
+    if category:
+        query = query.filter(Note.category == category)
+    
+    if search:
+        query = query.filter(Note.message_body.ilike(f"%{search}%"))
+    
+    if start_date:
+        query = query.filter(Note.created_at >= start_date)
+
+    if end_date:
+        query = query.filter(Note.created_at <= end_date)
+    
+    notes = query.all()
     return notes
 
 @router.get("/{note_id}")
