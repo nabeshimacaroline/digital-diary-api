@@ -107,6 +107,9 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
     event = db.query(Event).filter(Event.id == event_id).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
+
+    if event.status in [StatusEvent.FINISHED, StatusEvent.CANCELED]:
+        raise HTTPException(status_code=400, detail="Finished events or Canceled events cannot be edited")
     
     # Pega só o que o usuário enviou
     update_data = payload.model_dump(exclude_unset=True) 
