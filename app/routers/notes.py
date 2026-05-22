@@ -25,6 +25,8 @@ def list_notes(category: Optional[str] = Query(None),
                search: Optional[str] = Query(None),
                start_date: Optional[datetime] = Query(None),
                end_date: Optional[datetime] = Query(None),
+               skip: int = Query(0, ge=0),
+               limit: int = Query(10, ge=1, le=100),
                db: Session = Depends(get_db)
                ):
     
@@ -42,7 +44,7 @@ def list_notes(category: Optional[str] = Query(None),
     if end_date:
         query = query.filter(Note.created_at <= end_date)
     
-    notes = query.all()
+    notes = query.order_by(Note.created_at.desc()).offset(skip).limit(limit).all()
     return notes
 
 @router.get("/{note_id}")

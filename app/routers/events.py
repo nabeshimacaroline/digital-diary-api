@@ -42,6 +42,8 @@ def list_events(category: Optional[str] = Query(None),
                 search: Optional[str] = Query(None),
                 start_date: Optional[datetime] = Query(None),
                 end_date: Optional[datetime] = Query(None),
+                skip: int = Query(0, ge=0),
+                limit: int = Query(10, ge=1, le=100),
                 db: Session = Depends(get_db)
                 ):
     now = datetime.now(timezone.utc)
@@ -70,7 +72,7 @@ def list_events(category: Optional[str] = Query(None),
     if end_date:
         query = query.filter(Event.scheduled_at <= end_date)
 
-    events = query.all()
+    events = query.order_by(Event.scheduled_at.desc()).offset(skip).limit(limit).all()
 
     for event in events:
         scheduled = event.scheduled_at
