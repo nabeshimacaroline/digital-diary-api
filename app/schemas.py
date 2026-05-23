@@ -3,6 +3,10 @@ from typing import Optional
 from datetime import datetime
 from app.enums import StatusEvent
 
+# ---------------------------------------------------------------
+#                            NOTE
+# ---------------------------------------------------------------
+
 class NoteCreate(BaseModel):
     category: str = Field(max_length=50)
     message_body: str = Field(max_length=1000)
@@ -13,7 +17,13 @@ class NoteUpdate(BaseModel):
     message_body: Optional[str] = Field(default=None, max_length=1000)
     tag: Optional[str] = Field(default=None, max_length=50)
 
+# ---------------------------------------------------------------
+#                            EVENT
+# ---------------------------------------------------------------
+
 class EventCreate(BaseModel):
+    # se Event for criado a partir de uma Note existente, passar note_id
+    note_id: Optional[int] = Field(default=None)
     category: str = Field(max_length=50)
     message_body: str = Field(max_length=1000)
     classification: str = Field(max_length=50)
