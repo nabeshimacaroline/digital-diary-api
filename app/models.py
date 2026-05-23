@@ -1,32 +1,27 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum as SQLEnum,ForeignKey
-from app.database import Base
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum as SQLEnum, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from app.database import Base
 from app.enums import StatusEvent
 
 class Note(Base):
     __tablename__ = "notes"
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime, server_default=func.now())
-    category = Column(String(50))
+    category_id = Column(Integer, ForeignKey("categories.id"), index=True, nullable=False)
+    category = relationship("Category")
     message_body = Column(Text)
     tag = Column(String(50))
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-#class Event(Base):
-#    __tablename__ = "events"
-#    id = Column(Integer, primary_key=True, index=True)
-#    note_id = Column(Integer, ForeignKey("notes.id"))
-#    classification = Column(String(50))
-#    scheduled_at = Column(DateTime)
-#    status = Column(String(50))
-#    notification_at = Column(DateTime)
-#    is_notify = Column(Boolean)
-
 class Event(Base):
     __tablename__ = "events"
     id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), index=True, nullable=True)
+    note = relationship("Note")
     created_at = Column(DateTime, server_default=func.now())
-    category = Column(String(50))
+    category_id = Column(Integer, ForeignKey("categories.id"), index=True, nullable=False)
+    category = relationship("Category")
     message_body = Column(Text)
     classification = Column(String(50))
     tag = Column(String(50))
@@ -35,3 +30,8 @@ class Event(Base):
     notification_at = Column(DateTime)
     is_notify = Column(Boolean)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, index=True, nullable=False)
