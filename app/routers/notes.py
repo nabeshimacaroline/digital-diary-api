@@ -69,15 +69,33 @@ def get_note(note_id: int, db: Session = Depends(get_db)):
 
 @router.patch("/{note_id}")
 def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)):
-    # buscar e validar
+    #1 buscar e validar
     note = db.query(Note).filter(Note.id == note_id).first()
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     
-    #atualizar dados
-    update_data = payload.model_dump(exclude_unset=True) # Pega só o que o usuário enviou
+    #2 Pega só o que o usuário mandou
+    update_data = payload.model_dump(exclude_unset=True)
+
+    #3 Determinar se há envio de categoria
+    if "category" in update_data:
+        #4 Higienizar a categoria
+        clean_category_name = update_data["category"].strip().capitalize()
+
+        #4 Buscar ou cria categoria no banco
+        db_category = db.query(Category).filter(Category.name == clean_category_name).first()
+        if not db_category:
+            db_category = Category(name=clean_category_name)
+            db.add(db_category)
+            db.commit()
+            db.refresh(db_category)
+
+        #5 Remover a string e inserir o id
+        del update_data["category"]
+        update_data["category_id"] = db_category.id
+
     for key, value in update_data.items():
-        setattr(note, key, value) # Substitui o valor antigo pelo novo no objeto da nota
+        setattr(note, key, value) # Substitui dados limpos no objeto da nota
     
     #salvar e retornar
     db.commit()

@@ -127,7 +127,24 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
     # Pega só o que o usuário enviou
     update_data = payload.model_dump(exclude_unset=True) 
 
-    # --- inicio da validação ---
+    # Determinar se há envio de categoria
+    if "category" in update_data:
+        # Higienizar a categoria
+        clean_category_name = update_data["category"].strip().capitalize()
+
+        # Buscar ou cria categoria no banco
+        db_category = db.query(Category).filter(Category.name == clean_category_name).first()
+        if not db_category:
+            db_category = Category(name=clean_category_name)
+            db.add(db_category)
+            db.commit()
+            db.refresh(db_category)
+
+        #5 Remover a string e inserir o id
+        del update_data["category"]
+        update_data["category_id"] = db_category.id
+
+    # --- inicio da validação de tempo---
     # previsão de futuro
     final_scheduled = update_data.get("scheduled_at", event.scheduled_at)
     final_notification = update_data.get("notification_at", event.notification_at)
@@ -144,10 +161,10 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
         raise HTTPException(status_code=400, detail="Notification cannot be set on a date later than scheduled.")
 
     #regra 2 - se o usuário estiver alterando uma data, ela não pode estar no passado
-    if final_scheduled in update_data:
+    if "scheduled_at" in update_data:
         now = datetime.now(timezone.utc)
         if final_scheduled < now:
-            raise HTTPException (status_code=400, details="Scheduled cannot be a date in the past")
+            raise HTTPException (status_code=400, detail="Scheduled cannot be a date in the past")
     
     # --- final da validação ---
 
