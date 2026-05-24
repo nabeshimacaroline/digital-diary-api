@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional
 from datetime import datetime
 from app.enums import StatusEvent
@@ -16,6 +16,23 @@ class NoteUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=50)
     message_body: Optional[str] = Field(default=None, max_length=1000)
     tag: Optional[str] = Field(default=None, max_length=50)
+
+class NoteResponse(BaseModel):
+    id: int
+    created_at: datetime
+    category: str
+    message_body: str
+    tag: Optional[str]
+    updated_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def extract_category_name(cls, v):
+        if hasattr(v, "name"):
+            return v.name
+        return v
 
 # ---------------------------------------------------------------
 #                            EVENT
@@ -42,6 +59,7 @@ class EventUpdate(BaseModel):
 
 class EventResponse(BaseModel):
     id: int
+    note_id: Optional[int] = Field(default=None)
     created_at: datetime
     category: str
     message_body: str
@@ -53,3 +71,10 @@ class EventResponse(BaseModel):
     updated_at: Optional[datetime]
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def extract_category_name(cls, v):
+        if hasattr(v, "name"):
+            return v.name
+        return v

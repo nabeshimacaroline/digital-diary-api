@@ -3,22 +3,35 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 from app.database import get_db
-from app.models import Note
-from app.schemas import NoteCreate, NoteUpdate
+from app.models import Note, Category
+from app.schemas import NoteCreate, NoteUpdate, NoteResponse
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 
-@router.post("/")
+@router.post("/", response_model=NoteResponse, status_code=201)
 def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
-    note = Note(
-        category=payload.category,
-        message_body=payload.message_body,
-        tag=payload.tag
-        )
-    db.add(note)
+    #1 Higienizar a categoria
+    clean_category_name = payload.category.strip().capitalize()
+
+    #2 Buscar categoria no banco
+    db_category = db.query(Category).filter(Category.name == clean_category_name).first()
+
+    #3 Se não existir criar uma:
+    if not db_category:
+        db_category = Category(name=clean_category_name)
+        db.add(db_category)
+        db.commit()
+        db.refresh(db_category)
+
+    #4 Preparando pacote de dados
+    note_data = payload.model_dump(exclude={"category"})
+    note_data["category_id"] = db_category.id
+
+    new_note = Note(**note_data)
+    db.add(new_note)
     db.commit()
-    db.refresh(note)
-    return note
+    db.refresh(new_note)
+    return new_note
 
 @router.get("/")
 def list_notes(category: Optional[str] = Query(None),

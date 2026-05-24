@@ -3,38 +3,49 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
 from app.database import get_db
-from app.models import Event
+from app.models import Event, Category
 from app.schemas import EventCreate, EventUpdate, EventResponse
 from app.enums import StatusEvent
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
-@router.post("/")
+@router.post("/", response_model=EventResponse, status_code=201)
 def create_event(payload: EventCreate, db: Session = Depends(get_db)):
-    #definição do tempo
+    # 1. Higienizar a categoria
+    clean_category_name = payload.category.strip().capitalize()
+    
+    # 2. Buscar categoria no Banco
+    db_category = db.query(Category).filter(Category.name == clean_category_name).first()
+
+    # 3. Se não existir, cria uma.
+    if not db_category:
+        db_category = Category(name=clean_category_name)
+        db.add(db_category)
+        db.commit()
+        db.refresh(db_category)
+    
+    # 5. definição do tempo
     now = datetime.now(timezone.utc)
     scheduled = payload.scheduled_at
     notification = payload.notification_at
 
-    #validação
+    #6. validação
     if scheduled < now:
         raise HTTPException(status_code=400, detail="Scheduled cannot be a date in the past.")
     
     if notification is not None and notification > scheduled:
         raise HTTPException(status_code=400, detail="Notification cannot be set on a date later than scheduled.")
+    
+    # 7. Preparando os dados para Event
+    event_data = payload.model_dump(exclude={"category"}) #pegar tudo do payload, excluindo a string "category"
+    event_data["category_id"] = db_category.id
 
-    event = Event(
-        category=payload.category,
-        message_body=payload.message_body,
-        classification=payload.classification,
-        tag=payload.tag,
-        scheduled_at=payload.scheduled_at,
-        notification_at=payload.notification_at,
-        )
-    db.add(event)
+    new_event = Event(**event_data)
+        
+    db.add(new_event)
     db.commit()
-    db.refresh(event)
-    return event
+    db.refresh(new_event)
+    return new_event
 
 @router.get("/", response_model=list[EventResponse])
 def list_events(category: Optional[str] = Query(None),
