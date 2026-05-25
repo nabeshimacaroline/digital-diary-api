@@ -33,7 +33,7 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     db.refresh(new_note)
     return new_note
 
-@router.get("/")
+@router.get("/", response_model=list[NoteResponse])
 def list_notes(category: Optional[str] = Query(None),
                search: Optional[str] = Query(None),
                start_date: Optional[datetime] = Query(None),
@@ -46,7 +46,8 @@ def list_notes(category: Optional[str] = Query(None),
     query = db.query(Note)
 
     if category:
-        query = query.filter(Note.category == category)
+        clean_category_name = category.strip().capitalize()
+        query = query.filter(Note.category.has(name=clean_category_name))
     
     if search:
         query = query.filter(Note.message_body.ilike(f"%{search}%"))
@@ -60,7 +61,7 @@ def list_notes(category: Optional[str] = Query(None),
     notes = query.order_by(Note.created_at.desc()).offset(skip).limit(limit).all()
     return notes
 
-@router.get("/{note_id}")
+@router.get("/{note_id}", response_model=NoteResponse)
 def get_note(note_id: int, db: Session = Depends(get_db)):
     note = db.query(Note).filter(Note.id == note_id).first()
     if note is None:

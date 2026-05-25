@@ -61,7 +61,8 @@ def list_events(category: Optional[str] = Query(None),
     query = db.query(Event)
 
     if category:
-        query = query.filter(Event.category == category)
+        clean_category_name = category.strip().capitalize()
+        query = query.filter(Event.category.has(name=clean_category_name))
 
     if status:
         status = status.lower()
