@@ -5,13 +5,14 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Note, Category
 from app.schemas import NoteCreate, NoteUpdate, NoteResponse
+from app.utils import clean_and_normalize_label
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 
 @router.post("/", response_model=NoteResponse, status_code=201)
 def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
-    #1 Higienizar a categoria
-    clean_category_name = payload.category.strip().capitalize()
+    #1 Recebendo a categoria já normalizada
+    clean_category_name = payload.category
 
     #2 Buscar categoria no banco
     db_category = db.query(Category).filter(Category.name == clean_category_name).first()
@@ -46,7 +47,7 @@ def list_notes(category: Optional[str] = Query(None),
     query = db.query(Note)
 
     if category:
-        clean_category_name = category.strip().capitalize()
+        clean_category_name = clean_and_normalize_label(category)
         query = query.filter(Note.category.has(name=clean_category_name))
     
     if search:
@@ -79,9 +80,9 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
     update_data = payload.model_dump(exclude_unset=True)
 
     #3 Determinar se há envio de categoria
-    if "category" in update_data:
+    if "category" in update_data and update_data["category"]:
         #4 Higienizar a categoria
-        clean_category_name = update_data["category"].strip().capitalize()
+        clean_category_name = update_data["category"]
 
         #4 Buscar ou cria categoria no banco
         db_category = db.query(Category).filter(Category.name == clean_category_name).first()

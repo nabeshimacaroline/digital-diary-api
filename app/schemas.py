@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional
 from datetime import datetime
 from app.enums import StatusEvent
+from app.utils import clean_and_normalize_label
 
 # ---------------------------------------------------------------
 #                            NOTE
@@ -12,10 +13,33 @@ class NoteCreate(BaseModel):
     message_body: str = Field(max_length=1000)
     tag: Optional[str] = Field(default=None, max_length=50)
 
+    @field_validator("category", mode="before")
+    @classmethod
+    def _normalize_category(cls, v):
+        if v is None:
+            raise ValueError("category is required")
+        
+        normalized = clean_and_normalize_label(v)
+        if not normalized:
+            raise ValueError("category inválida após normalização")
+        return normalized
+
+
 class NoteUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=50)
     message_body: Optional[str] = Field(default=None, max_length=1000)
     tag: Optional[str] = Field(default=None, max_length=50)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _normalize_category(cls, v):
+        if v is None:
+            return None
+        
+        normalized = clean_and_normalize_label(v)
+        if not normalized:
+            raise ValueError("category inválida após normalização")
+        return normalized
 
 class NoteResponse(BaseModel):
     id: int
@@ -48,6 +72,17 @@ class EventCreate(BaseModel):
     scheduled_at: datetime
     notification_at: Optional[datetime]= Field(default=None)
 
+    @field_validator("category", mode="before")
+    @classmethod
+    def _normalize_category(cls, v):
+        if v is None:
+            raise ValueError("category is required")
+        
+        normalized = clean_and_normalize_label(v)
+        if not normalized:
+            raise ValueError("category inválida após normalização")
+        return normalized
+
 class EventUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=50)
     message_body: Optional[str] = Field(default=None, max_length=1000)
@@ -56,6 +91,17 @@ class EventUpdate(BaseModel):
     scheduled_at: Optional[datetime] = Field(default= None)
     notification_at: Optional[datetime] = Field(default=None)
     status: Optional[StatusEvent] = Field(default=None) # idéia aqui no futuro não é permitir que o usuário insira a informção, mas opte por alternativas fornecidas (1 - Finished | 2 - Canceled)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _normalize_category(cls, v):
+        if v is None:
+            return None
+        
+        normalized = clean_and_normalize_label(v)
+        if not normalized:
+            raise ValueError("category inválida após normalização")
+        return normalized
 
 class EventResponse(BaseModel):
     id: int

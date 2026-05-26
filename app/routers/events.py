@@ -6,13 +6,14 @@ from app.database import get_db
 from app.models import Event, Category
 from app.schemas import EventCreate, EventUpdate, EventResponse
 from app.enums import StatusEvent
+from app.utils import clean_and_normalize_label
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
 @router.post("/", response_model=EventResponse, status_code=201)
 def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     # 1. Higienizar a categoria
-    clean_category_name = payload.category.strip().capitalize()
+    clean_category_name = payload.category
     
     # 2. Buscar categoria no Banco
     db_category = db.query(Category).filter(Category.name == clean_category_name).first()
@@ -61,7 +62,7 @@ def list_events(category: Optional[str] = Query(None),
     query = db.query(Event)
 
     if category:
-        clean_category_name = category.strip().capitalize()
+        clean_category_name = clean_and_normalize_label(category)
         query = query.filter(Event.category.has(name=clean_category_name))
 
     if status:
@@ -129,9 +130,9 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
     update_data = payload.model_dump(exclude_unset=True) 
 
     # Determinar se há envio de categoria
-    if "category" in update_data:
-        # Higienizar a categoria
-        clean_category_name = update_data["category"].strip().capitalize()
+    if "category" in update_data and update_data["category"]:
+        # Receber categoria normalizada
+        clean_category_name = update_data["category"]
 
         # Buscar ou cria categoria no banco
         db_category = db.query(Category).filter(Category.name == clean_category_name).first()
