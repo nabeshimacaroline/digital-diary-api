@@ -154,4 +154,28 @@ class UserResponse(BaseModel):
     last_login: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+# ---------------------------------------------------------------
+#                       AUTENTICAÇÃO
+# ---------------------------------------------------------------
    
+class LoginRequest(BaseModel):
+    email: EmailStr = Field(max_length=100)
+    password: str = Field(..., min_length=8, max_length=50)
+    remember_me: Optional[bool] = Field(default=False, description="If true, issues a token with an extended expiration time.")
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _normalize_email(cls, v):
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+    
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    id: Optional[int] = None
