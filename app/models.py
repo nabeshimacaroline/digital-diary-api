@@ -7,6 +7,8 @@ from app.enums import StatusEvent
 class Note(Base):
     __tablename__ = "notes"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    user = relationship("User")
     created_at = Column(DateTime, server_default=func.now())
     category_id = Column(Integer, ForeignKey("categories.id"), index=True, nullable=False)
     category = relationship("Category")
@@ -17,6 +19,8 @@ class Note(Base):
 class Event(Base):
     __tablename__ = "events"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    user = relationship("User")
     note_id = Column(Integer, ForeignKey("notes.id"), index=True, nullable=True)
     note = relationship("Note")
     created_at = Column(DateTime, server_default=func.now())
@@ -35,3 +39,15 @@ class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), unique=True, index=True, nullable=False)
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(InterruptedError, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)   
+    hashed_password = Column(String(255), nullable=False) 
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    last_login = Column(DateTime, nullable=False)
+    

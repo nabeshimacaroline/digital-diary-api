@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, EmailStr, model_validator
 from typing import Optional
 from datetime import datetime
 from app.enums import StatusEvent
@@ -43,6 +43,7 @@ class NoteUpdate(BaseModel):
 
 class NoteResponse(BaseModel):
     id: int
+    user_id: int
     created_at: datetime
     category: str
     message_body: str
@@ -105,6 +106,7 @@ class EventUpdate(BaseModel):
 
 class EventResponse(BaseModel):
     id: int
+    user_id: int
     note_id: Optional[int] = Field(default=None)
     created_at: datetime
     category: str
@@ -124,3 +126,32 @@ class EventResponse(BaseModel):
         if hasattr(v, "name"):
             return v.name
         return v
+    
+# ---------------------------------------------------------------
+#                            USER
+# ---------------------------------------------------------------
+
+class UserCreate(BaseModel):
+    email: EmailStr = Field(max_length=100)
+    username: str = Field(..., max_length=50) # Obrigatório, igual ao banco
+    password: str = Field(..., min_length=8, max_length=50)
+    confirm_password: str = Field(..., min_length=8, max_length=50)
+
+    # O segurança verificando se as duas senhas batem
+    @model_validator(mode="after")
+    def check_passwords_match(self):
+        if self.password != self.confirm_password:
+            raise ValueError("As senhas não coincidem.")
+        return self
+    
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    username: str
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+   
