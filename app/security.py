@@ -1,6 +1,12 @@
 import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from jwt.exceptions import InvalidTokenError # Importação nova do PyJWT
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
+from app.database import get_db
+from app.models import User
 
 # ==========================================
 # 1. AS CONSTANTES 
@@ -40,3 +46,37 @@ def create_access_token(data: dict) -> str:
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     
     return encoded_jwt
+
+# 1. O LEITOR ÓPTICO DO TORNIQUETE
+# Avisamos o FastAPI onde é que os utilizadores vão buscar a pulseira
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+
+# 2. O SEGURANÇA DA PISTA DE DANÇA
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    # Preparamos o erro padrão caso algo corra mal
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        # Passo A: O segurança tenta ler a pulseira (descodificar o JWT)
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub") # Extraímos o email que guardámos lá dentro
+        
+        if email is None:
+            raise credentials_exception
+            
+    except InvalidTokenError:
+        # Passo B: Se a pulseira for falsa, estiver adulterada ou caducada, barramos!
+        raise credentials_exception
+        
+    # Passo C: O email é válido! Vamos à base de dados buscar o dono (utilizador)
+    user = db.query(User).filter(User.email == email).first()
+    
+    if user is None:
+        raise credentials_exception
+        
+    # Passo D: O utilizador existe e a pulseira é válida. Pode entrar!
+    return user

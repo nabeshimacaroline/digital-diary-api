@@ -3,15 +3,20 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
 from app.database import get_db
-from app.models import Event, Category
+from app.models import Event, Category, User
 from app.schemas import EventCreate, EventUpdate, EventResponse
 from app.enums import StatusEvent
 from app.utils import clean_and_normalize_label
+from app.security import get_current_user
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
 @router.post("/", response_model=EventResponse, status_code=201)
-def create_event(payload: EventCreate, db: Session = Depends(get_db)):
+def create_event(
+    payload: EventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     # 1. Higienizar a categoria
     clean_category_name = payload.category
     
@@ -41,7 +46,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     event_data = payload.model_dump(exclude={"category"}) #pegar tudo do payload, excluindo a string "category"
     event_data["category_id"] = db_category.id
 
-    new_event = Event(**event_data)
+    new_event = Event(**event_data, user_id=current_user.id)
         
     db.add(new_event)
     db.commit()
@@ -49,17 +54,19 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     return new_event
 
 @router.get("/", response_model=list[EventResponse])
-def list_events(category: Optional[str] = Query(None),
-                status: Optional[str] = Query(None),
-                search: Optional[str] = Query(None),
-                start_date: Optional[datetime] = Query(None),
-                end_date: Optional[datetime] = Query(None),
-                skip: int = Query(0, ge=0),
-                limit: int = Query(10, ge=1, le=100),
-                db: Session = Depends(get_db)
-                ):
+def list_events(
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     now = datetime.now(timezone.utc)
-    query = db.query(Event)
+    query = db.query(Event).filter(Event.user_id == current_user.id)
 
     if category:
         clean_category_name = clean_and_normalize_label(category)
@@ -100,8 +107,15 @@ def list_events(category: Optional[str] = Query(None),
     return events
 
 @router.get("/{event_id}", response_model=EventResponse)
-def get_event(event_id: int, db: Session = Depends(get_db)):
-    event = db.query(Event).filter(Event.id == event_id).first()
+def get_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
+    event = db.query(Event).filter(
+        Event.id == event_id,
+        Event.user_id == current_user.id
+        ).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     
@@ -117,9 +131,17 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     return event
 
 @router.patch("/{event_id}")
-def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_db)):
+def update_event(
+    event_id: int,
+    payload: EventUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     # buscar e validar
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = db.query(Event).filter(
+        Event.id == event_id,
+        Event.user_id == current_user.id
+        ).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -179,9 +201,16 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
     return event
 
 @router.delete("/{event_id}")
-def delete_event (event_id: int, db: Session = Depends(get_db)):
+def delete_event (
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     # buscar e validar
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = db.query(Event).filter(
+        Event.id == event_id,
+        Event.user_id == current_user.id
+        ).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     if event.status in [StatusEvent.FINISHED, StatusEvent.CANCELED]:

@@ -24,7 +24,6 @@ class NoteCreate(BaseModel):
             raise ValueError("category inválida após normalização")
         return normalized
 
-
 class NoteUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=50)
     message_body: Optional[str] = Field(default=None, max_length=1000)

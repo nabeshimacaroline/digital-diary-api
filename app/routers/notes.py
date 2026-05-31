@@ -3,14 +3,19 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 from app.database import get_db
-from app.models import Note, Category
+from app.models import Note, Category, User
 from app.schemas import NoteCreate, NoteUpdate, NoteResponse
 from app.utils import clean_and_normalize_label
+from app.security import get_current_user
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 
 @router.post("/", response_model=NoteResponse, status_code=201)
-def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
+def create_note(
+    payload: NoteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     #1 Recebendo a categoria já normalizada
     clean_category_name = payload.category
 
@@ -28,23 +33,25 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     note_data = payload.model_dump(exclude={"category"})
     note_data["category_id"] = db_category.id
 
-    new_note = Note(**note_data)
+    new_note = Note(**note_data, user_id=current_user.id)
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
     return new_note
 
 @router.get("/", response_model=list[NoteResponse])
-def list_notes(category: Optional[str] = Query(None),
-               search: Optional[str] = Query(None),
-               start_date: Optional[datetime] = Query(None),
-               end_date: Optional[datetime] = Query(None),
-               skip: int = Query(0, ge=0),
-               limit: int = Query(10, ge=1, le=100),
-               db: Session = Depends(get_db)
-               ):
+def list_notes(
+            category: Optional[str] = Query(None),
+            search: Optional[str] = Query(None),
+            start_date: Optional[datetime] = Query(None),
+            end_date: Optional[datetime] = Query(None),
+            skip: int = Query(0, ge=0),
+            limit: int = Query(10, ge=1, le=100),
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user)
+            ):
     
-    query = db.query(Note)
+    query = db.query(Note).filter(Note.user_id == current_user.id)
 
     if category:
         clean_category_name = clean_and_normalize_label(category)
@@ -63,16 +70,30 @@ def list_notes(category: Optional[str] = Query(None),
     return notes
 
 @router.get("/{note_id}", response_model=NoteResponse)
-def get_note(note_id: int, db: Session = Depends(get_db)):
-    note = db.query(Note).filter(Note.id == note_id).first()
+def get_note(
+        note_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+        ):
+    note = db.query(Note).filter(
+        Note.id == note_id,
+        Note.user_id == current_user.id
+        ).first()
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     return note
 
 @router.patch("/{note_id}")
-def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)):
+def update_note(
+            note_id: int,
+            payload: NoteUpdate,
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user)):
     #1 buscar e validar
-    note = db.query(Note).filter(Note.id == note_id).first()
+    note = db.query(Note).filter(
+        Note.id == note_id,
+        Note.user_id == current_user.id
+        ).first()
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     
@@ -105,9 +126,16 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
     return note
 
 @router.delete("/{note_id}")
-def delete_note (note_id: int, db: Session = Depends(get_db)):
+def delete_note (
+        note_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+        ):
     # buscar e validar
-    note = db.query(Note).filter(Note.id == note_id).first()
+    note = db.query(Note).filter(
+        Note.id == note_id,
+        Note.user_id == current_user.id
+        ).first()
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     
