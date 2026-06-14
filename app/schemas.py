@@ -23,6 +23,19 @@ class NoteCreate(BaseModel):
         if not normalized:
             raise ValueError("category inválida após normalização")
         return normalized
+    
+    @field_validator("message_body", mode="before")
+    @classmethod
+    def _validate_message_body(cls, v):
+        if v is None:
+            raise ValueError("message body is required")
+        
+        cleaned_body = str(v).strip()
+
+        if not cleaned_body:
+            raise ValueError("message body is required")
+        
+        return cleaned_body
 
 class NoteUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=50)
