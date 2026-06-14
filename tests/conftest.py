@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker, declarative_base
 from fastapi.testclient import TestClient
 
@@ -9,10 +10,11 @@ from app.models import User
 from app.security import get_password_hash
 
 # O motor do banco falso (em memória RAM)
-TEST_DATABASE_URL = "sqlite:///.memory"
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool
 )
 
 # A fabrica de sessões do banco falso
@@ -43,6 +45,7 @@ def client():
 
 
 #criação do usuário teste
+@pytest.fixture()
 def test_user(db_session):
 
     email = "carol@test.com"
