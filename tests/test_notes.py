@@ -94,3 +94,134 @@ def test_create_note_missing_required_fields(client, case, payload):
     # ==========================================
 
     assert resposta_nota.status_code == 422
+
+def test_get_notes_isolation(client):
+    # ==========================================
+    # 1. ARRANGE (A preparação do palco)
+    # ==========================================
+    
+    # Criando o Usuário 1 (Carol) e pegando o token
+    client.post(
+        "/users/",
+        json={
+        "email": "carol@teste.com", 
+        "username": "Carol", 
+        "password": "senhaSegura123", 
+        "confirm_password": "senhaSegura123"
+        })
+    token_carol = client.post(
+        "/users/login", 
+        data={
+        "username": "carol@teste.com", 
+        "password": "senhaSegura123"
+        }).json()["access_token"]
+    headers_carol = {"Authorization": f"Bearer {token_carol}"}
+
+    # Criando o Usuário 2 (João) e pegando o token
+    client.post(
+        "/users/", 
+        json={
+        "email": "joao@teste.com",
+        "username": "Joao", 
+        "password": "senhaSegura123", 
+        "confirm_password": "senhaSegura123"
+        })
+    token_joao = client.post(
+        "/users/login", 
+        data={
+        "username": "joao@teste.com", 
+        "password": "senhaSegura123"
+        }).json()["access_token"]
+    headers_joao = {"Authorization": f"Bearer {token_joao}"}
+
+    # Criando 1 Nota para a Carol
+    client.post("/notes/", json={"category": "pessoal", "message_body": "Nota secreta da Carol"}, headers=headers_carol)
+    
+    # Criando 2 Notas para o João
+    client.post("/notes/", json={"category": "trabalho", "message_body": "Nota do Joao 1"}, headers=headers_joao)
+    client.post("/notes/", json={"category": "trabalho", "message_body": "Nota do Joao 2"}, headers=headers_joao)
+
+    # ==========================================
+    # 2. ACT
+    # ==========================================
+    # O nosso robô (fingindo ser a Carol), vai chamar a rota GET /notes/
+    # Escreva a linha para fazer essa requisição usando o client:
+    resposta_listagem_carol = client.get("/notes/", headers=headers_carol)
+
+    # ==========================================
+    # 3. ASSERT
+    # ==========================================
+    # O banco de dados tem 3 notas no total. Mas a Carol só tem 1.
+    # 1. Verifique se o status_code é 200 (Sucesso)
+    # 2. Extraia o JSON da resposta (que será uma lista do Python)
+    # 3. Verifique se o tamanho dessa lista é exatamente 1 (Garantindo que as 2 notas do João não vieram)
+    # 4. Verifique se o message_body da nota que veio é "Nota secreta da Carol"
+    
+    assert resposta_listagem_carol.status_code == 200
+
+    notes_carol = resposta_listagem_carol.json()
+
+    assert len(notes_carol) == 1
+    assert notes_carol[0]["message_body"] == "Nota secreta da Carol"
+
+def test_get_other_user_notes_code_404(client):
+
+    # ==========================================
+    # 1. ARRANGE (A preparação do palco)
+    # ==========================================
+
+    #Carol
+    client.post(
+        "/users/", 
+        json={
+            "email": "carol@teste.com",
+            "username": "carol",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_carol = client.post(
+        "/users/login",
+        data={
+        "username": "carol@teste.com",
+        "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_carol = {"Authorization": f"Bearer {token_carol}"}
+
+    #Joao
+    client.post(
+        "/users/",
+        json={
+            "email": "joao@teste.com",
+            "username": "joao",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_joao = client.post(
+        "/users/login",
+        data={
+            "username": "joao@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_joao = {"Authorization": f"Bearer {token_joao}"}
+
+    #nota joao
+    resposta_nota_joao = client.post("/notes/", json={"category": "estudos", "message_body": "Nota secreta 1534"}, headers=headers_joao)
+    id_joao = resposta_nota_joao.json()["id"]
+
+    # ==========================================
+    # 2. ACT
+    # ==========================================
+    #tentativa da Carol de acessar notas de joao
+
+    resposta_nota_carol = client.get(f"/notes/{id_joao}", headers=headers_carol)
+
+    # ==========================================
+    # 3. ASSERT
+    # ==========================================
+
+    assert resposta_nota_carol.status_code == 404
+
