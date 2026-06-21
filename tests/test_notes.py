@@ -164,7 +164,7 @@ def test_get_notes_isolation(client):
     assert len(notes_carol) == 1
     assert notes_carol[0]["message_body"] == "Nota secreta da Carol"
 
-def test_get_other_user_notes_code_404(client):
+def test_unauthenticated_access_returns_401(client):
 
     # ==========================================
     # 1. ARRANGE (A preparação do palco)
@@ -225,3 +225,26 @@ def test_get_other_user_notes_code_404(client):
 
     assert resposta_nota_carol.status_code == 404
 
+rotas_protegidas_notas = [
+    ("POST", "/notes/"),
+    ("GET", "/notes/"),
+    ("GET", "/notes/1"),
+    ("PATCH", "/notes/1"),
+    ("DELETE", "/notes/1")
+]
+
+@pytest.mark.parametrize("method, route", rotas_protegidas_notas)
+def test_create_note_missing_required_fields(client, method, route):
+    
+
+    # ==========================================
+    # 2. ACT
+    # ==========================================
+   
+    resposta = client.request(method, route)
+        
+    # ==========================================
+    # 3. ASSERT
+    # ==========================================
+
+    assert resposta.status_code == 401
