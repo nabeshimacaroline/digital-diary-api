@@ -248,3 +248,197 @@ def test_create_note_missing_required_fields(client, method, route):
     # ==========================================
 
     assert resposta.status_code == 401
+
+def test_update_note_success(client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================    
+    client.post(
+        "/users/",
+        json={
+            "email": "carol@teste.com",
+            "username": "Carol",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_carol = client.post(
+        "/users/login",
+        data={
+            "username": "carol@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_carol = {"Authorization": f"Bearer {token_carol}"}
+
+    nota_carol = client.post("/notes/", json={"category": "estudos", "message_body": "Nota original"}, headers=headers_carol)
+    id_carol = nota_carol.json()["id"]
+
+# ==========================================
+# 2. ACT
+# ==========================================  
+ #tentativa de atualização
+
+    payload_atualizacao =  {"message_body": "Nota atualizada com sucesso!"}
+
+    atualizacao_nota = client.patch(f"/notes/{id_carol}", json=payload_atualizacao, headers=headers_carol)
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert atualizacao_nota.status_code == 200
+
+    nota_atualizada = atualizacao_nota.json()
+    assert nota_atualizada["message_body"] == "Nota atualizada com sucesso!"
+
+    conferencia_banco = client.get(f"/notes/{id_carol}", headers=headers_carol)
+    assert conferencia_banco.json()["message_body"] == "Nota atualizada com sucesso!"
+
+def test_update_other_user_note_returns_404(client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================    
+    client.post(
+        "/users/",
+        json={
+            "email": "carol@teste.com",
+            "username": "Carol",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_carol = client.post(
+        "/users/login",
+        data={
+            "username": "carol@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_carol = {"Authorization": f"Bearer {token_carol}"}
+
+    client.post(
+        "/users/",
+        json={
+            "email": "joao@teste.com",
+            "username": "Joao",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_joao = client.post(
+        "/users/login",
+        data={
+            "username": "joao@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_joao = {"Authorization": f"Bearer {token_joao}"}
+
+    nota_joao = client.post("/notes/", json={"category": "estudos", "message_body": "Nota secreta João."}, headers=headers_joao)
+    id_joao = nota_joao.json()["id"]
+
+# ==========================================
+# 2. ACT
+# ==========================================   
+    payload_carol = {"message_body": "Hacker Carol esteve aqui"}
+
+    update_attempt_carol = client.patch(f"/notes/{id_joao}", json=payload_carol, headers=headers_carol)
+
+# ==========================================
+# 3. ASSERT
+# ==========================================   
+    assert update_attempt_carol.status_code == 404
+
+def test_delete_note_success(client):
+# ==========================================
+# 1. ARRANGE
+# ========================================== 
+    client.post(
+        "/users/",
+        json={
+            "email": "carol@teste.com",
+            "username": "Carol",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_carol = client.post(
+        "/users/login",
+        data={
+            "username": "carol@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token_carol}"}
+
+    nota_carol = client.post("/notes/", json={"category": "estudos", "message_body": "Nota teste 123"}, headers=headers)
+    id_carol = nota_carol.json()["id"]
+
+# ==========================================
+# 2. ACT
+# ==========================================
+    tentativa_delecao_nota = client.delete(f"/notes/{id_carol}", headers=headers)
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert tentativa_delecao_nota.status_code == 204
+    
+    conferencia_banco = client.get(f"/notes/{id_carol}", headers=headers)
+    assert conferencia_banco.status_code == 404
+
+def test_delete_other_user_note_returns_404(client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================   
+    client.post(
+        "/users/",
+        json={
+            "email": "carol@teste.com",
+            "username": "Carol",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_carol = client.post(
+        "/users/login",
+        data={
+            "username": "carol@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_carol = {"Authorization": f"Bearer {token_carol}"}
+
+    client.post(
+        "/users/",
+        json={
+            "email": "joao@teste.com",
+            "username": "Joao",
+            "password": "senhaSegura123",
+            "confirm_password": "senhaSegura123"
+        }
+    )
+    token_joao = client.post(
+        "/users/login",
+        data={
+            "username": "joao@teste.com",
+            "password": "senhaSegura123"
+        }
+    ).json()["access_token"]
+    headers_joao = {"Authorization": f"Bearer {token_joao}"}
+
+    nota_joao = client.post("/notes/", json={"category": "estudos", "message_body": "Nota secreta João."}, headers=headers_joao)
+    id_joao = nota_joao.json()["id"]
+
+# ==========================================
+# 2. ACT
+# ==========================================
+    tentativa_delecao_carol = client.delete(f"/notes/{id_joao}", headers=headers_carol)
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert tentativa_delecao_carol.status_code == 404
+
+    checagem_banco_joao = client.get(f"/notes/{id_joao}", headers=headers_joao)
+    assert checagem_banco_joao.json()["message_body"] == "Nota secreta João."
