@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -10,7 +10,7 @@ from app.security import get_current_user
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 
-@router.post("/", response_model=NoteResponse, status_code=201)
+@router.post("/", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
 def create_note(
     payload: NoteCreate,
     db: Session = Depends(get_db),
@@ -39,7 +39,7 @@ def create_note(
     db.refresh(new_note)
     return new_note
 
-@router.get("/", response_model=list[NoteResponse])
+@router.get("/", response_model=list[NoteResponse], status_code=status.HTTP_200_OK)
 def list_notes(
             category: Optional[str] = Query(None),
             search: Optional[str] = Query(None),
@@ -69,7 +69,7 @@ def list_notes(
     notes = query.order_by(Note.created_at.desc()).offset(skip).limit(limit).all()
     return notes
 
-@router.get("/{note_id}", response_model=NoteResponse)
+@router.get("/{note_id}", response_model=NoteResponse, status_code=status.HTTP_200_OK)
 def get_note(
         note_id: int,
         db: Session = Depends(get_db),
@@ -83,7 +83,7 @@ def get_note(
         raise HTTPException(status_code=404, detail="Note not found")
     return note
 
-@router.patch("/{note_id}")
+@router.patch("/{note_id}", status_code=status.HTTP_200_OK)
 def update_note(
             note_id: int,
             payload: NoteUpdate,
@@ -125,7 +125,7 @@ def update_note(
     db.refresh(note)
     return note
 
-@router.delete("/{note_id}")
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_note (
         note_id: int,
         db: Session = Depends(get_db),
@@ -137,12 +137,12 @@ def delete_note (
         Note.user_id == current_user.id
         ).first()
     if note is None:
-        raise HTTPException(status_code=404, detail="Note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
     
     #deletar os dados
     db.delete(note)
     
     #salvar
     db.commit()
-    return {"message": "Note deleted successfully"}
+
 
