@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
@@ -11,7 +11,7 @@ from app.security import get_current_user
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
-@router.post("/", response_model=EventResponse, status_code=201)
+@router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(
     payload: EventCreate,
     db: Session = Depends(get_db),
@@ -53,7 +53,7 @@ def create_event(
     db.refresh(new_event)
     return new_event
 
-@router.get("/", response_model=list[EventResponse])
+@router.get("/", response_model=list[EventResponse], status_code=status.HTTP_200_OK)
 def list_events(
     category: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -106,7 +106,7 @@ def list_events(
 
     return events
 
-@router.get("/{event_id}", response_model=EventResponse)
+@router.get("/{event_id}", response_model=EventResponse, status_code=status.HTTP_200_OK)
 def get_event(
     event_id: int,
     db: Session = Depends(get_db),
@@ -130,7 +130,7 @@ def get_event(
     
     return event
 
-@router.patch("/{event_id}")
+@router.patch("/{event_id}", status_code=status.HTTP_200_OK)
 def update_event(
     event_id: int,
     payload: EventUpdate,
@@ -200,7 +200,7 @@ def update_event(
     db.refresh(event)
     return event
 
-@router.delete("/{event_id}")
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event (
     event_id: int,
     db: Session = Depends(get_db),
@@ -221,4 +221,4 @@ def delete_event (
     
     #salvar
     db.commit()
-    return {"message": "Event deleted successfully"}
+    
