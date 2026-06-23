@@ -94,16 +94,6 @@ def list_events(
 
     events = query.order_by(Event.scheduled_at.desc()).offset(skip).limit(limit).all()
 
-    for event in events:
-        scheduled = event.scheduled_at
-
-        # 1. Blindagem de segurança do fuso horário para a leitura
-        if scheduled is not None and scheduled.tzinfo is None:
-            scheduled = scheduled.replace(tzinfo=timezone.utc)
-        # 2. A checagem do correto   
-        if event.status == StatusEvent.SCHEDULED and scheduled < now:
-            event.status = "Pending"
-
     return events
 
 @router.get("/{event_id}", response_model=EventResponse, status_code=status.HTTP_200_OK)
@@ -118,16 +108,7 @@ def get_event(
         ).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    
-    now = datetime.now(timezone.utc)
-    scheduled = event.scheduled_at
-
-    if scheduled is not None and scheduled.tzinfo is None:
-            scheduled = scheduled.replace(tzinfo=timezone.utc)
-         
-    if event.status == StatusEvent.SCHEDULED and scheduled < now:
-        event.status = "Pending"
-    
+      
     return event
 
 @router.patch("/{event_id}", status_code=status.HTTP_200_OK)

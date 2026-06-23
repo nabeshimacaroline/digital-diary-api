@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict, field_validator, EmailStr, model_validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app.enums import StatusEvent
 from app.utils import clean_and_normalize_label
 
@@ -138,6 +138,20 @@ class EventResponse(BaseModel):
         if hasattr(v, "name"):
             return v.name
         return v
+    
+    #checagem dinamica de status "pending"
+    @model_validator(mode="after")
+    def check_status_pending(self):
+        now = datetime.now(timezone.utc)
+        scheduled = self.scheduled_at
+
+        # Blindagem de segurança do fuso horário para a leitura
+        if scheduled.tzinfo is None:
+            scheduled = scheduled.replace(tzinfo=timezone.utc)
+
+        if self.status == StatusEvent.SCHEDULED and scheduled < now:
+            self.status = "Pending"
+        return self
     
 # ---------------------------------------------------------------
 #                            USER
