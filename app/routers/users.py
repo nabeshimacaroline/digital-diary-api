@@ -9,7 +9,7 @@ from app.security import get_password_hash, verify_password, create_access_token
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.post("/", response_model=UserResponse, status_code=201)
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def creat_user(payload:UserCreate, db: Session = Depends(get_db)):
     #Checagem de Email
     if db.query(User).filter(User.email == payload.email).first():
