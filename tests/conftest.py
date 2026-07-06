@@ -39,9 +39,9 @@ def override_get_db():
 
 # Aplicando a substituição do FastAPI
 app.dependency_overrides[get_db] = override_get_db
-@ pytest.fixture()
+@pytest.fixture()
 def db_session():
-    db = SessionLocal()
+    db = TestingSessionLocal()
     try: 
         yield db
     finally: 
