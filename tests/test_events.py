@@ -51,3 +51,35 @@ def test_creat_event_success(authorized_client):
 # ==========================================
     assert event_attempt.status_code == 201
     assert event_attempt.json()["status"] == StatusEvent.SCHEDULED
+
+def test_create_event_with_linked_note_success(authorized_client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================
+    note_create = authorized_client.post("/notes/", json={
+        "category": "projeto",
+        "message_body": "Nota mãe"
+    })
+
+    assert note_create.status_code == 201
+    
+    note_id = note_create.json()["id"]
+    payload_event = {
+        "note_id": note_id,
+        "category": "projeto",
+        "message_body": "Teste de criação de Evento vinculado à Nota",
+        "classification": "tarefa",
+        "scheduled_at": "2026-10-18T10:00:00Z"
+    }
+
+# ==========================================
+# 2. ACT
+# ==========================================
+    event_attempt = authorized_client.post("/events/", json=payload_event)
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert event_attempt.status_code == 201
+    assert event_attempt.json()["status"] == StatusEvent.SCHEDULED
+    assert event_attempt.json()["note_id"] == note_id   
