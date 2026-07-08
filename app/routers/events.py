@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
 from app.database import get_db
-from app.models import Event, Category, User
+from app.models import Note, Event, Category, User
 from app.schemas import EventCreate, EventUpdate, EventResponse
 from app.enums import StatusEvent
 from app.utils import clean_and_normalize_label
@@ -17,32 +17,48 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
     ):
-    # 1. Higienizar a categoria
+    #Filtro do Bouncer
+    note_id = payload.note_id
+    if note_id:
+        note = db.query(Note).filter(
+            Note.id == note_id,
+            Note.user_id == current_user.id
+            ).first()
+        if note is None:
+            raise HTTPException(status_code=404, detail="Note not found")
+        
+
+        # event = db.query(Event).filter(
+        #Event.id == event_id,
+        #Event.user_id == current_user.id
+        #).first()
+
+    # Higienizar a categoria
     clean_category_name = payload.category
     
-    # 2. Buscar categoria no Banco
+    # Buscar categoria no Banco
     db_category = db.query(Category).filter(Category.name == clean_category_name).first()
 
-    # 3. Se não existir, cria uma.
+    # Se não existir, cria uma.
     if not db_category:
         db_category = Category(name=clean_category_name)
         db.add(db_category)
         db.commit()
         db.refresh(db_category)
     
-    # 5. definição do tempo
+    # definição do tempo
     now = datetime.now(timezone.utc)
     scheduled = payload.scheduled_at
     notification = payload.notification_at
 
-    #6. validação
+    # validação
     if scheduled < now:
         raise HTTPException(status_code=400, detail="Scheduled cannot be a date in the past.")
     
     if notification is not None and notification > scheduled:
         raise HTTPException(status_code=400, detail="Notification cannot be set on a date later than scheduled.")
     
-    # 7. Preparando os dados para Event
+    # Preparando os dados para Event
     event_data = payload.model_dump(exclude={"category"}) #pegar tudo do payload, excluindo a string "category"
     event_data["category_id"] = db_category.id
 
