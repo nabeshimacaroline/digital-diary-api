@@ -8,6 +8,10 @@ def freeze_time_for_events():
         yield
 
 
+# ==========================================
+# ROTAS POST
+# ==========================================
+
 def test_create_event_in_past_date(authorized_client):
 # ==========================================
 # 1. ARRANGE
@@ -105,6 +109,43 @@ def test_create_event_with_nonexistent_note_returns_404(authorized_client):
 # 3. ASSERT
 # ==========================================
     assert event_attempt.status_code == 404
+
+def test_create_event_with_other_users_note_returns_404(authorized_client, second_authorized_client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================
+    user_1_note_create = authorized_client.post(
+        "/notes/",
+        json={
+            "category": "estudos",
+            "message_body": "Nota mãe para teste de invasão"
+        }
+    )
+    assert user_1_note_create.status_code == 201
+    user_1_note_id = user_1_note_create.json()["id"]
+
+# ==========================================
+# 2. ACT
+# ==========================================
+    user_2_event_create_attempt = second_authorized_client.post(
+        "/events/",
+        json={
+            "note_id": user_1_note_id,
+            "category": "estudos",
+            "message_body": "estive aqui",
+            "classification": "tarefa",
+            "scheduled_at": "2026-07-09T00:00:01Z"
+        }
+    )
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert user_2_event_create_attempt.status_code == 404
+    assert user_2_event_create_attempt.json()["detail"] == "Note not found"
+
+# ==========================================
+# ROTAS PATCH
+# ==========================================
 
 def test_patch_event_with_nonexistent_note_returns_404(authorized_client):
 # ==========================================
