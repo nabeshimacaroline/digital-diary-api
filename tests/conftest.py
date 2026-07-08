@@ -2,13 +2,11 @@ import pytest
 import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
-from app.database import Base, get_db, SessionLocal
+from app.database import Base, get_db
 from app.main import app
-from app.models import User
-from app.security import get_password_hash
 
 # O motor do banco falso (em memória RAM)
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -54,7 +52,7 @@ def client():
     return TestClient(app)
 
 
-#criação do usuário teste
+#criação do usuário teste 1
 @pytest.fixture()
 def test_user(client):
     # 1. Geramos as credenciais únicas
@@ -77,12 +75,12 @@ def test_user(client):
     
     # Armadilha de segurança para a criação
     if response.status_code not in (200, 201):
-        raise ValueError(f"Falha ao criar usuária na Fixture! Servidor respondeu: {response.text}")
+        raise ValueError(f"Fixture user creation error: server responded with: {response.text}")
 
     # 3. Retornamos as chaves para a fixture authorized_client fazer o login
     return {"email": email, "password": password}
 
-@pytest.fixture
+@pytest.fixture()
 def authorized_client(client, test_user):
     # 1. Fazemos a requisição e guardamos a resposta inteira na variável
     response = client.post(
@@ -95,9 +93,50 @@ def authorized_client(client, test_user):
     
     # 2. A ARMADILHA: Se o login falhar, paramos tudo e imprimimos o erro do servidor!
     if response.status_code != 200:
-        raise ValueError(f"Falha no Login! Servidor respondeu: {response.status_code} - {response.text}")
+        raise ValueError(f"Login error: server responded with: {response.status_code} - {response.text}")
 
  
     token = response.json()["access_token"]
     client.headers = {**client.headers, "Authorization": f"Bearer {token}"}
     return client
+
+#criação do usuário teste 2
+@pytest.fixture()
+def test_user_2(client):
+    codigo = str(uuid.uuid4())[:6]
+    email = f"helena_{codigo}@teste.com"
+    username = f"Helena_{codigo}"
+    password =  "senhaSegura123"
+
+    response = client.post(
+        "/users/", 
+        json={
+            "email": email,
+            "username": username,
+            "password": password,
+            "confirm_password": password
+            }
+    )
+    
+    if response.status_code not in (200, 201):
+        raise ValueError(f"Fixture user creation error: server responded with: {response.text}")
+    
+    return {"email": email, "password": password}
+
+@pytest.fixture()
+def second_authorized_client(client, test_user_2):
+    response = client.post(
+        "/users/login",
+        data={
+            "username": test_user_2["email"],
+            "password": test_user_2["password"]
+        }
+    )
+
+    if response.status_code != 200: 
+        raise ValueError(f"Login error: server responded with: {response.status_code} - {response.text}")
+    
+    token = response.json()["access_token"]
+    new_independent_robot = TestClient(app)
+    new_independent_robot.headers= {**new_independent_robot.headers, "Authorization": f"Bearer {token}"}
+    return new_independent_robot
