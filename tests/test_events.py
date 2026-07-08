@@ -105,4 +105,41 @@ def test_create_event_with_nonexistent_note_returns_404(authorized_client):
 # 3. ASSERT
 # ==========================================
     assert event_attempt.status_code == 404
-    
+
+def test_patch_event_with_nonexistent_note_returns_404(authorized_client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================
+    note_create = authorized_client.post("/notes/", json={
+        "category": "projeto",
+        "message_body": "Nota mãe para teste de blindagem em edições"
+    })
+    assert note_create.status_code == 201
+    note_id = note_create.json()["id"]
+
+    event_create = authorized_client.post("/events/", json={
+        "note_id": note_id,
+        "category": "projeto",
+        "message_body": "Evento para edição",
+        "classification": "tarefa",
+        "scheduled_at": "2026-10-18T03:00:00Z"
+    })
+    assert event_create.status_code == 201
+    event_id = event_create.json()["id"]
+
+# ==========================================
+# 2. ACT
+# ==========================================
+    event_patch_attempt = authorized_client.patch(f"/events/{event_id}", json={
+        "note_id": 9999,
+        "category": "projeto",
+        "message_body": "Tentativa de edição com note_id invalido",
+        "classification": "tarefa",
+        "scheduled_at": "2026-10-18T03:00:00Z"
+    })
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert event_patch_attempt.status_code == 404
+    assert event_patch_attempt.json()["detail"] == "Note not found"

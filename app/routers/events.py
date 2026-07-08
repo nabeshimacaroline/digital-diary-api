@@ -27,12 +27,6 @@ def create_event(
         if note is None:
             raise HTTPException(status_code=404, detail="Note not found")
         
-
-        # event = db.query(Event).filter(
-        #Event.id == event_id,
-        #Event.user_id == current_user.id
-        #).first()
-
     # Higienizar a categoria
     clean_category_name = payload.category
     
@@ -141,6 +135,15 @@ def update_event(
         ).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
+    
+    note_id = payload.note_id
+    if note_id:
+        note = db.query(Note).filter(
+            Note.id == note_id,
+            Note.user_id == current_user.id
+        ).first()
+        if note is None:
+            raise HTTPException(status_code=404, detail="Note not found")
 
     if event.status in [StatusEvent.FINISHED, StatusEvent.CANCELED]:
         raise HTTPException(status_code=400, detail="Finished events or Canceled events cannot be edited")

@@ -97,6 +97,7 @@ class EventCreate(BaseModel):
         return normalized
 
 class EventUpdate(BaseModel):
+    note_id: Optional[int] = Field(default=None)
     category: Optional[str] = Field(default=None, max_length=50)
     message_body: Optional[str] = Field(default=None, max_length=1000)
     classification: Optional[str] = Field(default=None, max_length=50)
