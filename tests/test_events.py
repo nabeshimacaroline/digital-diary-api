@@ -143,6 +143,27 @@ def test_create_event_with_other_users_note_returns_404(authorized_client, secon
     assert user_2_event_create_attempt.status_code == 404
     assert user_2_event_create_attempt.json()["detail"] == "Note not found"
 
+def test_create_event_with_notification(authorized_client):
+# ==========================================
+# ARRANGE/ACT
+# ==========================================
+    event_create_attempt = authorized_client.post(
+        "/events/",
+        json={
+            "category": "estudos",
+            "message_body": "teste de configuração de notificação",
+            "classification": "tarefa",
+            "scheduled_at": "2026-10-18T09:00:00Z",
+            "notification_at": "2026-10-17T10:00:00Z"
+        }
+    )
+
+# ==========================================
+# ASSERT
+# ==========================================
+    assert event_create_attempt.status_code == 201
+    assert event_create_attempt.json()["notification_at"] == "2026-10-17T10:00:00"
+
 # ==========================================
 # ROTAS PATCH
 # ==========================================
