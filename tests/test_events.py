@@ -185,6 +185,41 @@ def test_create_event_with_notification_after_scheduled_date_returns_400(authori
     assert event_create_attempt.json()["detail"] == "Notification cannot be set on a date later than scheduled."
 
 # ==========================================
+# ROTAS GET
+# ==========================================
+
+def test_get_calculates_dynamic_pending_status(authorized_client):
+# ==========================================
+# 1. ARRANGE
+# ==========================================
+    
+    event_create = authorized_client.post(
+    "/events/",
+    json={
+        "category": "estudo",
+        "message_body": "Evento para teste de checagem de calculo dinamico de status",
+        "classification": "tarefa",
+        "scheduled_at": "2026-06-27T10:05:00Z"
+    }
+)
+    assert event_create.status_code == 201
+   
+# ==========================================
+# 2. ACT
+# ==========================================
+    with freeze_time("2026-06-27T10:06:00Z"):
+        event_response = authorized_client.get("/events/")
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert event_response.status_code == 200
+
+    event = event_response.json()
+    assert len(event) == 1 
+    assert event[0]["status"] == "Pending"
+
+# ==========================================
 # ROTAS PATCH
 # ==========================================
 
