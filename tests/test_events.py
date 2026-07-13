@@ -219,6 +219,57 @@ def test_get_calculates_dynamic_pending_status(authorized_client):
     assert len(event) == 1 
     assert event[0]["status"] == "Pending"
 
+def test_get_events_isolation(authorized_client, second_authorized_client):
+# ==========================================
+# 1. ARRANGE 
+# ==========================================
+    # User 1 event create
+    authorized_client.post(
+        "/events/",
+        json={
+            "category": "estudos",
+            "message_body": "Evento user_1 teste de isolamento",
+            "classification": "tarefa",
+            "scheduled_at": "2026-10-18T10:00:00Z"
+        }
+    )
+    
+    # User 2 event create
+    second_authorized_client.post(
+        "/events/",
+        json={
+            "category": "estudos",
+            "message_body": "Evento user_2 teste de isolamento",
+            "classification": "tarefa",
+            "scheduled_at": "2026-10-17T10:00:00Z"
+        }
+    )
+   
+    second_authorized_client.post(
+        "/events/",
+        json={
+            "category": "estudos",
+            "message_body": "Evento user_2",
+            "classification": "tarefa",
+            "scheduled_at": "2026-10-31T10:00:00Z"
+        }
+    )
+        
+# ==========================================
+# 2. ACT
+# ==========================================
+    user_1_response = authorized_client.get("/events/")
+
+# ==========================================
+# 3. ASSERT
+# ==========================================
+    assert user_1_response.status_code == 200
+
+    user_1_data = user_1_response.json()
+
+    assert len(user_1_data) == 1
+    assert user_1_data[0]["message_body"] == "Evento user_1 teste de isolamento"
+
 # ==========================================
 # ROTAS PATCH
 # ==========================================
